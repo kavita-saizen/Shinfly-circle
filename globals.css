@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+.reading { font-family: Georgia, "Times New Roman", Times, serif; }
+.glass { background: rgba(255,255,255,.06); backdrop-filter: blur(10px); }

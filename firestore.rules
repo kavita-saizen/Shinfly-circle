@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEditor() {
+      return isSignedIn() && request.auth.token.editor == true;
+    }
+
+    // All app data under /artifacts/{appId}/public/data/
+    match /artifacts/{appId}/public/data {
+
+      // profiles: doc id == uid
+      match /profiles/{uid} {
+        allow read: if true;
+
+        // Vet can create/update their own profile while Pending (or updating fields)
+        allow create: if isSignedIn() && request.auth.uid == uid;
+        allow update: if (isSignedIn() && request.auth.uid == uid) || isEditor();
+
+        // Only editors can delete profiles
+        allow delete: if isEditor();
+      }
+
+      // articles
+      match /articles/{articleId} {
+        // Public can read only published; editors can read all; approved vets can read Needs Review & Feedback Received for review
+        allow read: if resource.data.status == "Published" || isEditor();
+
+        allow create, update, delete: if isEditor();
+      }
+
+      // feedback
+      match /feedback/{feedbackId} {
+        allow read: if true;
+
+        allow create: if isSignedIn();
+
+        // Only the author or editor can delete/edit
+        allow update, delete: if isEditor() || (isSignedIn() && request.auth.uid == resource.data.reviewerId);
+      }
+
+      // review summaries (public-visible, editor-written)
+      match /reviewSummaries/{docId} {
+        allow read: if true;
+        allow create, update, delete: if isEditor();
+      }
+    }
+  }
+}
